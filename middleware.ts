@@ -10,7 +10,7 @@ export function middleware(request: NextRequest) {
 
   if (pathname === '/super-admin' || pathname.startsWith('/super-admin/')) {
     if (pathname === '/super-admin/login') return NextResponse.next();
-    if (request.cookies.get('sakan_super')?.value !== '1') {
+    if (!request.cookies.get('sakan_super')?.value) {
       return NextResponse.redirect(new URL('/super-admin/login', request.url));
     }
   }
