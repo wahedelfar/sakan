@@ -14,6 +14,7 @@ export async function POST(req:Request){
   if(action==='booking_status'){
     const {id,status}=body;
     if(!id||!status)return NextResponse.json({error:'بيانات ناقصة'},{status:400});
+    if(!['معلق','مؤكد','ملغي'].includes(status))return NextResponse.json({error:'حالة حجز غير صالحة'},{status:400});
     const {data:b,error}=await s.from('bookings').update({status}).eq('id',id).eq('tenant_domain',domain).select('property_id').single();
     if(error)return NextResponse.json({error:error.message},{status:500});
     if(b?.property_id)await s.from('properties').update({status:status==='مؤكد'?'محجوز':status==='مرفوض'||status==='ملغي'?'متاح':'محجوز جزئيا'}).eq('id',b.property_id).eq('tenant_domain',domain);
