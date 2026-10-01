@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+// @ts-ignore
 import bcrypt from 'bcryptjs';
 
 const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
