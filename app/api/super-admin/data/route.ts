@@ -18,6 +18,11 @@ export async function GET(){
   const error=licenses.error||settings.error||customers.error;
   if(error)return NextResponse.json({error:error.message},{status:500});
 
+  const rawCustomers=customers.data||[];
+  const customerMap=new Map<string,any>();
+  for(const c of rawCustomers){const key=`${c.tenant_domain||''}|${c.phone||c.id}`;if(!customerMap.has(key))customerMap.set(key,c);}
+  const normalizedCustomers=Array.from(customerMap.values());
+
   const normalizedLicenses=(licenses.data||[]).map((l:any)=>({
     ...l,
     customer_name:l.client_name||'',
@@ -28,6 +33,6 @@ export async function GET(){
   return NextResponse.json({
     licenses:normalizedLicenses,
     settings:settings.data||[],
-    customers:customers.data||[]
+    customers:normalizedCustomers
   },{headers:{'Cache-Control':'no-store'}});
 }
