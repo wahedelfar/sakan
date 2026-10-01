@@ -1,6 +1,17 @@
 export const dynamic = 'force-dynamic';
 import { NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
+
+export async function GET(req: Request) {
+  const { searchParams } = new URL(req.url)
+  const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
+  if (searchParams.get('all') === '1') {
+    const { data } = await supabase.from('settings').select('*').order('tenant_domain')
+    return NextResponse.json(data || [])
+  }
+  return NextResponse.json({})
+}
+
 export async function POST(req: Request) {
   const body = await req.json()
   const supabase = createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!)
