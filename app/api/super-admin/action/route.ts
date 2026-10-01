@@ -49,7 +49,16 @@ export async function POST(req:Request){
       primary_color:/^#[0-9a-fA-F]{6}$/.test(String(body.data?.primary_color||''))?body.data.primary_color:'#D4AF37',
       brand_edit_locked:true
     };
-    const {data,error}=await s.from('settings').upsert(payload,{onConflict:'tenant_domain'}).select().single();
+    const existing=await s.from('settings').select('id').eq('tenant_domain',domain).maybeSingle();
+    if(existing.error)return NextResponse.json({error:existing.error.message},{status:500});
+    let data:any,error:any;
+    if(existing.data?.id){
+      const result=await s.from('settings').update(payload).eq('id',existing.data.id).select().single();
+      data=result.data; error=result.error;
+    }else{
+      const result=await s.from('settings').insert(payload).select().single();
+      data=result.data; error=result.error;
+    }
     if(error)return NextResponse.json({error:error.message},{status:500});
     return NextResponse.json({ok:true,settings:data});
   }
