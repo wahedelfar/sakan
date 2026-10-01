@@ -8,7 +8,6 @@ export default function SuperAdmin() {
   const [ready,setReady]=useState(false);
   const [tab,setTab]=useState('brand');
   const [licenses,setLicenses]=useState<License[]>([]);
-  const [customers,setCustomers]=useState<any[]>([]);
   const [allSettings,setAllSettings]=useState<any[]>([]);
   const [settings,setSettings]=useState<any>({});
   const [license,setLicense]=useState<any>(emptyLicense);
@@ -22,7 +21,6 @@ export default function SuperAdmin() {
     if(!r.ok){setLicenseError(j.error||'تعذر تحميل البيانات');return;}
     setLicenses(j.licenses||[]);
     setAllSettings(j.settings||[]);
-    setCustomers(j.customers||[]);
     if(j.settings?.length && !settings.tenant_domain) setSettings(j.settings[0]);
   };
 
@@ -34,7 +32,6 @@ export default function SuperAdmin() {
       if(!r.ok){setLicenseError(j.error||'تعذر تحميل بيانات الإدارة العليا');setReady(true);return;}
       setLicenses(j.licenses||[]);
       setAllSettings(j.settings||[]);
-      setCustomers(j.customers||[]);
       if(j.settings?.length) setSettings(j.settings[0]);
       setReady(true);
     })();
@@ -87,7 +84,7 @@ export default function SuperAdmin() {
       </header>
 
       <nav className="glass rounded-2xl p-2 grid grid-cols-3 gap-2 mb-6">
-        {[['brand','إعدادات البراند والعملاء'],['licenses','التراخيص'],['customers','العملاء']].map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={`w-full px-4 py-3 rounded-xl ${tab===k?'bg-[#D4AF37] text-black font-bold':'bg-white/5'}`}>{l}</button>)}
+        {[['brand','إعدادات البراند والعملاء'],['licenses','التراخيص']].map(([k,l])=><button key={k} onClick={()=>setTab(k)} className={`w-full px-4 py-3 rounded-xl ${tab===k?'bg-[#D4AF37] text-black font-bold':'bg-white/5'}`}>{l}</button>)}
       </nav>
 
       {notice&&<div className="mb-4 glass rounded-xl p-3 border border-[#D4AF37]/30">{notice}<button onClick={()=>setNotice('')} className="float-left">×</button></div>}
@@ -118,7 +115,6 @@ export default function SuperAdmin() {
         <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name}</b><div className="text-white/50">{l.domain}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={()=>deleteLicense(l.id)} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف</button></div></div>)}</div>
       </section>}
 
-      {tab==='customers'&&<section className="space-y-3">{customers.map(c=>{return <div key={c.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{c.name}</b><div className="text-white/50">{c.phone}</div><div className="text-xs text-white/40">{c.tenant_domain}</div></div><div className="text-xs text-white/40">عميل حجز</div></div>})}</section>}
     </div>
   </main>;
 }
