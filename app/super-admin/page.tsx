@@ -118,7 +118,7 @@ export default function SuperAdmin() {
         <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name}</b><div className="text-white/50">{l.domain}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={()=>deleteLicense(l.id)} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف</button></div></div>)}</div>
       </section>}
 
-      {tab==='customers'&&<section className="space-y-3">{customers.map(c=>{const lic=licenses.find(l=>l.domain===c.tenant_domain);return <div key={c.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{c.name}</b><div className="text-white/50">{c.phone}</div><div className="text-xs text-white/40">{c.tenant_domain}</div></div><div className={lic?.status==='active'?'text-green-300':'text-yellow-300'}>{lic?`اشتراك: ${lic.status}`:'بدون ترخيص'}</div></div>})}</section>}
+      {tab==='customers'&&<section className="space-y-3">{customers.map(c=><div key={c.id} className="glass rounded-2xl p-4"><div className="flex justify-between gap-3"><div><b>{c.name}</b><div className="text-white/50">{c.phone}</div></div><span className="text-xs text-white/40">عميل حجز</span></div><div className="text-xs text-white/40 mt-2">الموقع: {c.tenant_domain}</div></div>)}</section>
     </div>
   </main>;
 }
