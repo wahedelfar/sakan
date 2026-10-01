@@ -3,7 +3,8 @@ import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { validSessionToken } from '@/lib/sessionAuth';
 
-const SUPABASE_URL='https://apmopxvwxmwxwgxscbqt.supabase.co';\nfunction db(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY!);}
+const SUPABASE_URL='https://apmopxvwxmwxwgxscbqt.supabase.co';
+function db(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY!);}
 function isSuperAdmin(){return validSessionToken(cookies().get('sakan_super')?.value,'super');}
 function cleanDomain(value:unknown){return String(value||'').trim().toLowerCase().split(':')[0];}
 
