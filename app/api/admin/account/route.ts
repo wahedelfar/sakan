@@ -3,15 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 // @ts-ignore
 import bcrypt from 'bcryptjs';
 
-const url = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-const supabase = createClient(url, key, { auth: { persistSession: false } });
-
 function domainFrom(r: Request){
   return (r.headers.get('x-forwarded-host') || r.headers.get('host') || 'sakan-egy.vercel.app').split(':')[0].toLowerCase();
 }
 
 export async function POST(r: Request){
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  if(!url ||!key) return NextResponse.json({ ok:false, error:'Supabase config missing' }, { status:500 });
+  const supabase = createClient(url, key, { auth:{ persistSession:false } });
+
   const b = await r.json().catch(()=>({}));
   const newUsername = String(b.username||'').trim();
   const newPassword = String(b.password||'');
@@ -37,7 +38,6 @@ export async function POST(r: Request){
   }
 
   const hash = await bcrypt.hash(newPassword, 12);
-
   await supabase.from('client_auth').upsert({
     tenant_domain: domain,
     username: newUsername,
