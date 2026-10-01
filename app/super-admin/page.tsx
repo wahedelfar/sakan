@@ -1,6 +1,5 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabaseClient';
 
 type License = { id:string; customer_name?:string; customer_phone?:string; domain?:string; status:string; expires_at?:string|null; created_at?:string };
 const emptyLicense = { customer_name:'', customer_phone:'', domain:'', status:'active', expires_at:'' };
@@ -17,47 +16,57 @@ export default function SuperAdmin() {
   const [notice,setNotice]=useState('');
 
   const load=async()=>{
-    const [l,c,s]=await Promise.all([
-      supabase.from('licenses').select('*').order('created_at',{ascending:false}),
-      supabase.from('customers').select('*').order('created_at',{ascending:false}),
-      supabase.from('settings').select('*').order('tenant_domain')
-    ]);
-    if(l.error){setLicenseError('جدول التراخيص غير متاح');setLicenses([])}else{setLicenseError('');setLicenses(l.data||[])}
-    setCustomers(c.data||[]);
-    setAllSettings(s.data||[]);
-    if(s.data?.length) setSettings(s.data[0]);
+    const r=await fetch('/api/super-admin/data',{cache:'no-store'});
+    if(r.status===401){location.href='/super-admin/login';return;}
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok){setLicenseError(j.error||'تعذر تحميل البيانات');return;}
+    setLicenses(j.licenses||[]);
+    setAllSettings(j.settings||[]);
+    setCustomers(j.customers||[]);
+    if(j.settings?.length && !settings.tenant_domain) setSettings(j.settings[0]);
   };
 
   useEffect(()=>{
-    if(localStorage.getItem('isSuperAdmin')!=='true'){location.href='/super-admin/login';return}
-    setReady(true);
-    load();
+    (async()=>{
+      const r=await fetch('/api/super-admin/data',{cache:'no-store'});
+      if(!r.ok){location.href='/super-admin/login';return;}
+      const j=await r.json();
+      setLicenses(j.licenses||[]);
+      setAllSettings(j.settings||[]);
+      setCustomers(j.customers||[]);
+      if(j.settings?.length) setSettings(j.settings[0]);
+      setReady(true);
+    })();
   },[]);
 
   const saveLicense=async()=>{
-    if(!license.customer_name &&!license.domain)return alert('أدخل اسم العميل أو النطاق');
-    const payload={...license,expires_at:license.expires_at||null};
-    const r=license.id?await supabase.from('licenses').update(payload).eq('id',license.id):await supabase.from('licenses').insert(payload);
-    if(r.error)return alert(r.error.message);
-    setLicense(emptyLicense);load();
+    if(!license.customer_name && !license.domain)return alert('أدخل اسم العميل أو النطاق');
+    const r=await fetch('/api/super-admin/action',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'license_save',id:license.id||null,data:{...license,expires_at:license.expires_at||null}})
+    });
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)return alert(j.error||'تعذر حفظ الترخيص');
+    setLicense(emptyLicense);setNotice('✅ تم حفظ الترخيص');load();
+  };
+
+  const deleteLicense=async(id:string)=>{
+    if(!confirm('حذف الترخيص؟'))return;
+    const r=await fetch('/api/super-admin/action',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'license_delete',id})});
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)return alert(j.error||'تعذر الحذف');
+    load();
   };
 
   const saveBrand=async()=>{
-    if(!settings.tenant_domain) return alert('اكتب الدومين - مثال: sakan-egy.vercel.app');
-    const res = await fetch('/api/admin/settings',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({
-        brand_name: settings.brand_name||'',
-        whatsapp_number: settings.whatsapp_number||'',
-        vodafone_number: settings.vodafone_number||'',
-        instapay_ipn: settings.instapay_ipn||'',
-        logo_url: settings.logo_url||'',
-        tenant_domain: settings.tenant_domain
-      })
+    if(!settings.tenant_domain)return alert('اكتب الدومين - مثال: sakan-egy.vercel.app');
+    const r=await fetch('/api/super-admin/action',{
+      method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({action:'settings_save',data:settings})
     });
-    if(!res.ok){const j=await res.json(); return alert(j.error);}
-    setNotice('✅ تم حفظ إعدادات '+settings.tenant_domain+' - هيظهر فورا في موقعه');
+    const j=await r.json().catch(()=>({}));
+    if(!r.ok)return alert(j.error||'تعذر حفظ الإعدادات');
+    setNotice('✅ تم حفظ إعدادات '+settings.tenant_domain);
     load();
   };
 
@@ -105,10 +114,10 @@ export default function SuperAdmin() {
           <div className="flex gap-2 mt-4"><button onClick={saveLicense} className="btn-gold rounded-xl px-6 py-3">حفظ</button>{license.id&&<button onClick={()=>setLicense(emptyLicense)} className="bg-white/10 rounded-xl px-6 py-3">إلغاء</button>}</div>
           {licenseError&&<p className="text-yellow-300 mt-4">{licenseError}</p>}
         </div>
-        <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name}</b><div className="text-white/50">{l.domain}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={async()=>{if(confirm('حذف؟')){await supabase.from('licenses').delete().eq('id',l.id);load()}}} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف</button></div></div>)}</div>
+        <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name}</b><div className="text-white/50">{l.domain}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={()=>deleteLicense(l.id)} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف</button></div></div>)}</div>
       </section>}
 
-      {tab==='customers'&&<section className="space-y-3">{customers.map(c=>{const lic=licenses.find(l=>l.customer_phone&&l.customer_phone===c.phone);return <div key={c.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{c.name}</b><div className="text-white/50">{c.phone}</div></div><div className={lic?.status==='active'?'text-green-300':'text-yellow-300'}>{lic?`اشتراك: ${lic.status}`:'بدون ترخيص'}</div></div>})}</section>}
+      {tab==='customers'&&<section className="space-y-3">{customers.map(c=>{const lic=licenses.find(l=>l.domain===c.tenant_domain);return <div key={c.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{c.name}</b><div className="text-white/50">{c.phone}</div><div className="text-xs text-white/40">{c.tenant_domain}</div></div><div className={lic?.status==='active'?'text-green-300':'text-yellow-300'}>{lic?`اشتراك: ${lic.status}`:'بدون ترخيص'}</div></div>})}</section>}
     </div>
   </main>;
 }
