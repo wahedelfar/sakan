@@ -5,8 +5,8 @@ import bcrypt from 'bcryptjs';
 
 function domainFrom(r: Request) {
   return (r.headers.get('x-forwarded-host') || r.headers.get('host') || 'sakan-egy.vercel.app')
-  .split(':')[0]
-  .toLowerCase();
+   .split(':')[0]
+   .toLowerCase();
 }
 
 export async function POST(r: Request) {
@@ -15,23 +15,38 @@ export async function POST(r: Request) {
   const supabase = createClient(url, key, { auth: { persistSession: false } });
 
   const b = await r.json().catch(() => ({}));
-  const username = String(b.username || '');
+  const username = String(b.username || '').trim();
   const password = String(b.password || '');
   const domain = domainFrom(r);
 
-  const { data, error } = await supabase
-  .from('client_auth')
-  .select('username,password_hash')
-  .eq('tenant_domain', domain)
-  .maybeSingle();
+  let data: { username: string; password_hash: string } | null = null;
 
-  if (error) return NextResponse.json({ ok: false }, { status: 500 });
+  try {
+    const { data: row } = await supabase
+     .from('client_auth')
+     .select('username,password_hash')
+     .eq('tenant_domain', domain)
+     .maybeSingle();
+    data = row as any;
+  } catch {
+    data = null;
+  }
 
-  const valid = data
-  ? username === data.username && await bcrypt.compare(password, data.password_hash)
-    : username === 'waheed' && password === 'ahmedwaheed';
+  let valid = false;
+  if (data?.password_hash) {
+    try {
+      valid = username === data.username && (await bcrypt.compare(password, data.password_hash));
+    } catch {
+      valid = false;
+    }
+  } else {
+    // لو مفيش صف في الجدول أو الـ RLS مانع القراءة، ارجع للافتراضي
+    valid = username === 'waheed' && password === 'ahmedwaheed';
+  }
 
-  if (!valid) return NextResponse.json({ ok: false }, { status: 401 });
+  if (!valid) {
+    return NextResponse.json({ ok: false, error: 'بيانات الدخول غير صحيحة' }, { status: 401 });
+  }
 
   const res = NextResponse.json({ ok: true, username: data?.username || username });
   res.cookies.set('sakan_admin', '1', {
@@ -39,7 +54,7 @@ export async function POST(r: Request) {
     sameSite: 'lax',
     secure: true,
     path: '/',
-    maxAge: 604800
+    maxAge: 60 * 60 * 24 * 7, // 7 أيام
   });
   return res;
 }
