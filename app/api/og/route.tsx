@@ -16,7 +16,7 @@ export async function GET(request: Request) {
 
   const clientName = brand?.client_name || brand?.brand_name || 'سكن';
   const area = brand?.area || brand?.location || 'مصر';
-  const logoUrl = brand?.logo_url || '';
+  const logoUrlRaw = brand?.logo_url || '';\n  let logoUrl = '';\n  if (logoUrlRaw) {\n    try { logoUrl = new URL(logoUrlRaw, `https://${domain}`).toString(); } catch {}\n  }
 
   return new ImageResponse(
     (
