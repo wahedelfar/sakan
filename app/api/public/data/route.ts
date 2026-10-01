@@ -12,7 +12,7 @@ export async function GET(req:Request){
 
   const [p,b,sec,settings]=await Promise.all([
     s.from('properties').select('*').eq('tenant_domain',domain).order('created_at',{ascending:false}),
-    s.from('bookings').select('id,property_id,check_in,check_out,status,customer_phone,arrival_time').eq('tenant_domain',domain).in('status',['مؤكد','معلق']),
+    s.from('bookings').select('id,property_id,check_in,check_out,status,arrival_time').eq('tenant_domain',domain).in('status',['مؤكد','معلق']),
     s.from('sections').select('*').eq('tenant_domain',domain).order('name'),
     s.from('settings').select('*').eq('tenant_domain',domain).maybeSingle()
   ]);
