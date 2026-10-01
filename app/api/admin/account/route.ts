@@ -8,9 +8,8 @@ function domainFrom(r: Request){
 }
 
 export async function POST(r: Request){
-  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if(!url ||!key) return NextResponse.json({ ok:false, error:'Supabase config missing' }, { status:500 });
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://apmopxvwxmwxwgxscbqt.supabase.co';
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'sb_publishable_XY3KDQqMY0YkqqvceRQI4g_tjcaZgsG';
   const supabase = createClient(url, key, { auth:{ persistSession:false } });
 
   const b = await r.json().catch(()=>({}));
@@ -24,11 +23,15 @@ export async function POST(r: Request){
     return NextResponse.json({ ok:false, error:'اسم المستخدم قصير أو كلمة المرور أقل من 6' }, { status:400 });
   }
 
-  const { data } = await supabase.from('client_auth').select('username,password_hash').eq('tenant_domain', domain).maybeSingle();
+  let row = null;
+  try {
+    const { data } = await supabase.from('client_auth').select('username,password_hash').eq('tenant_domain', domain).maybeSingle();
+    row = data;
+  } catch { row = null; }
 
   let validCurrent = false;
-  if(data){
-    validCurrent = curUser === data.username && await bcrypt.compare(curPass, data.password_hash);
+  if(row?.password_hash){
+    validCurrent = curUser === row.username && await bcrypt.compare(curPass, row.password_hash);
   } else {
     validCurrent = curUser === 'waheed' && curPass === 'ahmedwaheed';
   }
@@ -38,12 +41,16 @@ export async function POST(r: Request){
   }
 
   const hash = await bcrypt.hash(newPassword, 12);
-  await supabase.from('client_auth').upsert({
+  const { error } = await supabase.from('client_auth').upsert({
     tenant_domain: domain,
     username: newUsername,
     password_hash: hash,
     updated_at: new Date().toISOString()
   }, { onConflict: 'tenant_domain' });
+
+  if(error){
+    return NextResponse.json({ ok:false, error: error.message }, { status:500 });
+  }
 
   return NextResponse.json({ ok:true, username: newUsername });
 }
