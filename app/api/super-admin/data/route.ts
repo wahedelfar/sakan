@@ -1,46 +1,32 @@
 import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
+import { validSessionToken } from '@/lib/sessionAuth';
 
-function db() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
-}
+function db(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!,process.env.SUPABASE_SERVICE_ROLE_KEY!);}
+function isSuperAdmin(){return validSessionToken(cookies().get('sakan_super')?.value,'super');}
 
-function isSuperAdmin() {
-  return cookies().get('sakan_super')?.value === '1';
-}
-
-export async function GET() {
-  if (!isSuperAdmin()) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const s = db();
-  const [licenses, settings, bookings] = await Promise.all([
-    s.from('licenses').select('*').order('created_at', { ascending: false }),
+export async function GET(){
+  if(!isSuperAdmin()) return NextResponse.json({error:'Unauthorized'},{status:401});
+  const s=db();
+  const [licenses,settings,customers]=await Promise.all([
+    s.from('licenses').select('*').order('created_at',{ascending:false}),
     s.from('settings').select('*').order('tenant_domain'),
-    s.from('bookings').select('tenant_domain,customer_name,customer_phone').order('created_at', { ascending: false })
+    s.from('customers').select('id,name,phone,tenant_domain,created_at').order('created_at',{ascending:false})
   ]);
+  const error=licenses.error||settings.error||customers.error;
+  if(error)return NextResponse.json({error:error.message},{status:500});
 
-  if (licenses.error || settings.error || bookings.error) {
-    return NextResponse.json({
-      error: licenses.error?.message || settings.error?.message || bookings.error?.message
-    }, { status: 500 });
-  }
-
-  const seen = new Map<string, any>();
-  for (const b of bookings.data || []) {
-    const key = [b.tenant_domain || '', b.customer_phone || ''].join('|');
-    if (!b.customer_phone || seen.has(key)) continue;
-    seen.set(key, {
-      id: key,
-      name: b.customer_name || '',
-      phone: b.customer_phone,
-      tenant_domain: b.tenant_domain || ''
-    });
-  }
+  const normalizedLicenses=(licenses.data||[]).map((l:any)=>({
+    ...l,
+    customer_name:l.client_name||'',
+    customer_phone:l.phone||'',
+    status:l.is_active===false?'suspended':(l.expires_at&&new Date(l.expires_at).getTime()<Date.now()?'expired':'active')
+  }));
 
   return NextResponse.json({
-    licenses: licenses.data || [],
-    settings: settings.data || [],
-    customers: Array.from(seen.values())
-  }, { headers: { 'Cache-Control': 'no-store' } });
+    licenses:normalizedLicenses,
+    settings:settings.data||[],
+    customers:customers.data||[]
+  },{headers:{'Cache-Control':'no-store'}});
 }
