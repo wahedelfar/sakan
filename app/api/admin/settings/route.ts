@@ -6,7 +6,7 @@ import { createClient } from '@supabase/supabase-js';
 import { validSessionToken } from '@/lib/sessionAuth';
 
 function getSupabase() {
-  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL!, process.env.SUPABASE_SERVICE_ROLE_KEY!);
+  return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://apmopxvwxmwxwgxscbqt.supabase.co', process.env.SUPABASE_SERVICE_ROLE_KEY!);
 }
 function isSuperAdmin() {
   return validSessionToken(cookies().get('sakan_super')?.value, 'super');
