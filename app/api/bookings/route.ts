@@ -24,7 +24,8 @@ export async function POST(req:Request){
  const paymentTotal=body.payment_type==='عربون فقط'?deposit:total;
  const {data,error}=await s.from('bookings').insert({property_id:property.id,tenant_domain:domain,customer_name:String(body.customer_name),customer_phone:String(body.customer_phone),check_in:body.check_in,check_out:body.check_out,total_price:paymentTotal,payment_method:body.payment_method,receipt_url,status:'معلق',payment_type:body.payment_type||'كامل',deposit_paid:body.payment_type==='عربون فقط',arrival_time:body.arrival_time||'09:00'}).select().single();
  if(error)return NextResponse.json({error:error.message},{status:500});
- await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});
- await s.from('properties').update({status:'محجوز جزئيا'}).eq('id',property.id).eq('tenant_domain',domain);
- return NextResponse.json({booking:data},{status:201});
+ const customerResult=await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});
+ const propertyResult=await s.from('properties').update({status:'محجوز جزئيا'}).eq('id',property.id).eq('tenant_domain',domain);
+ // فشل تحديث بيانات العميل أو حالة العقار لا يلغي الحجز الذي تم إنشاؤه بالفعل.
+ return NextResponse.json({booking:data,customer_warning:customerResult.error?.message||null,property_warning:propertyResult.error?.message||null},{status:201});
 }
