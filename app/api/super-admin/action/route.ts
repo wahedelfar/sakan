@@ -18,14 +18,27 @@ export async function POST(req:Request){
     if(!domain)return NextResponse.json({error:'domain is required'},{status:400});
     const status=['active','suspended','expired'].includes(body.data?.status)?body.data.status:'active';
     const payload={
-      client_name:String(body.data?.customer_name||body.data?.client_name||'').trim(),
+      client_name:(String(body.data?.customer_name||body.data?.client_name||'').trim()||domain),
       phone:String(body.data?.customer_phone||body.data?.phone||'').trim()||null,
       domain,
       is_active:status==='active',
       expires_at:body.data?.expires_at||null
     };
-    const q=id?s.from('licenses').update(payload).eq('id',id):s.from('licenses').insert(payload);
-    const {data,error}=await q.select().single();
+    let data:any,error:any;
+    if(id){
+      const result=await s.from('licenses').update(payload).eq('id',id).select().single();
+      data=result.data; error=result.error;
+    }else{
+      const existing=await s.from('licenses').select('id').eq('domain',domain).maybeSingle();
+      if(existing.error)return NextResponse.json({error:existing.error.message},{status:500});
+      if(existing.data?.id){
+        const result=await s.from('licenses').update(payload).eq('id',existing.data.id).select().single();
+        data=result.data; error=result.error;
+      }else{
+        const result=await s.from('licenses').insert(payload).select().single();
+        data=result.data; error=result.error;
+      }
+    }
     if(error)return NextResponse.json({error:error.message},{status:500});
     return NextResponse.json({ok:true,license:{...data,customer_name:data.client_name||'',customer_phone:data.phone||'',status:data.is_active===false?'suspended':(data.expires_at&&new Date(data.expires_at).getTime()<Date.now()?'expired':'active')}});
   }
@@ -47,7 +60,6 @@ export async function POST(req:Request){
       vodafone_number:String(body.data?.vodafone_number||''),
       instapay_ipn:String(body.data?.instapay_ipn||''),
       logo_url:String(body.data?.logo_url||''),
-      primary_color:/^#[0-9a-fA-F]{6}$/.test(String(body.data?.primary_color||''))?body.data.primary_color:'#D4AF37',
       brand_edit_locked:true
     };
     const existing=await s.from('settings').select('id').eq('tenant_domain',domain).maybeSingle();
