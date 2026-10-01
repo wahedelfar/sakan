@@ -29,8 +29,9 @@ export default function SuperAdmin() {
   useEffect(()=>{
     (async()=>{
       const r=await fetch('/api/super-admin/data',{cache:'no-store'});
-      if(!r.ok){location.href='/super-admin/login';return;}
-      const j=await r.json();
+      if(r.status===401){location.href='/super-admin/login';return;}
+      const j=await r.json().catch(()=>({}));
+      if(!r.ok){setLicenseError(j.error||'تعذر تحميل بيانات الإدارة العليا');setReady(true);return;}
       setLicenses(j.licenses||[]);
       setAllSettings(j.settings||[]);
       setCustomers(j.customers||[]);
