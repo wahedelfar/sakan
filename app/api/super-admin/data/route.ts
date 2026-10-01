@@ -10,12 +10,11 @@ function isSuperAdmin(){return validSessionToken(cookies().get('sakan_super')?.v
 export async function GET(){
   if(!isSuperAdmin()) return NextResponse.json({error:'Unauthorized'},{status:401});
   const s=db();
-  const [licenses,settings,customers]=await Promise.all([
+  const [licenses,settings]=await Promise.all([
     s.from('licenses').select('*').order('created_at',{ascending:false}),
-    s.from('settings').select('*').order('tenant_domain'),
-    s.from('customers').select('id,name,phone,tenant_domain,created_at').order('created_at',{ascending:false})
+    s.from('settings').select('*').order('tenant_domain')
   ]);
-  const error=licenses.error||settings.error||customers.error;
+  const error=licenses.error||settings.error;
   if(error)return NextResponse.json({error:error.message},{status:500});
 
   const normalizedLicenses=(licenses.data||[]).map((l:any)=>({
@@ -27,7 +26,6 @@ export async function GET(){
 
   return NextResponse.json({
     licenses:normalizedLicenses,
-    settings:settings.data||[],
-    customers:customers.data||[]
+    settings:settings.data||[]
   },{headers:{'Cache-Control':'no-store'}});
 }
