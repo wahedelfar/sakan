@@ -22,9 +22,9 @@ export async function POST(req:Request){
  const paymentTotal=body.payment_type==='عربون فقط'?deposit:total;
  const bookingId=crypto.randomUUID();
  const booking={id:bookingId,property_id:property.id,tenant_domain:domain,customer_name:String(body.customer_name),customer_phone:String(body.customer_phone),check_in:body.check_in,check_out:body.check_out,total_price:paymentTotal,payment_method:body.payment_method,receipt_url,status:'معلق',payment_type:body.payment_type||'كامل',deposit_paid:body.payment_type==='عربون فقط',arrival_time:body.arrival_time||'09:00'};
- const {error}=await s.from('bookings').insert(booking);
+ const {data:createdBooking,error}=await s.from('bookings').insert(booking).select().single();
  if(error)return NextResponse.json({error:error.message},{status:500});
  let customerWarning=null;
  try{const customerResult=await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});customerWarning=customerResult.error?.message||null}catch(e){customerWarning='تعذر تحديث بيانات العميل'}
- return NextResponse.json({booking:{id:booking.id},customer_warning:customerWarning,receipt_warning},{status:201});
+ return NextResponse.json({booking:createdBooking||{id:booking.id},customer_warning:customerWarning,receipt_warning},{status:201});
 }
