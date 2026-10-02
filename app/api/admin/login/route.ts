@@ -20,7 +20,7 @@ export async function POST(r: Request) {
   // but only a licensed tenant can use them.
   const { data: license, error: licenseError } = await supabase
     .from('licenses')
-    .select('status,is_active,expires_at')
+    .select('is_active,expires_at')
     .eq('domain', domain)
     .maybeSingle();
 
@@ -28,8 +28,6 @@ export async function POST(r: Request) {
 
   const activeLicense =
     !!license &&
-    license.status !== 'suspended' &&
-    license.status !== 'expired' &&
     license.is_active !== false &&
     (!license.expires_at || new Date(license.expires_at).getTime() >= Date.now());
 
