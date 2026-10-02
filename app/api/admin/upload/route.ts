@@ -12,8 +12,9 @@ export async function POST(req:Request){
   const buf=Buffer.from(String(body.base64).split(',').pop()||'','base64');
   if(buf.length>8*1024*1024)return NextResponse.json({error:'حجم الصورة أكبر من 8MB'},{status:400});
   const safe=String(body.name).replace(/[^a-zA-Z0-9._-]/g,'_');
-  const path=domain+'/properties/'+Date.now()+'-'+safe;
-  const s=db(),u=await s.storage.from('property-images').upload(path,buf,{contentType:body.type||'image/jpeg',upsert:false});
+  const kind=String(body.kind||'property');
+  const path=kind==='banner'?domain+'/branding/header-banner':kind==='logo'?domain+'/branding/logo':domain+'/properties/'+Date.now()+'-'+safe;
+  const s=db(),u=await s.storage.from('property-images').upload(path,buf,{contentType:body.type||'image/jpeg',upsert:kind==='banner'||kind==='logo'});
   if(u.error)return NextResponse.json({error:u.error.message},{status:400});
   return NextResponse.json({url:s.storage.from('property-images').getPublicUrl(path).data.publicUrl});
 }
