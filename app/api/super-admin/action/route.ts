@@ -2,11 +2,11 @@ import { NextResponse } from 'next/server';
 import { cookies } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { validSessionToken } from '@/lib/sessionAuth';
+import { normalizeTenantDomain } from '@/lib/tenant';
 
 const SUPABASE_URL='https://apmopxvwxmwxwgxscbqt.supabase.co';
 function db(){return createClient(process.env.NEXT_PUBLIC_SUPABASE_URL||SUPABASE_URL,process.env.SUPABASE_SERVICE_ROLE_KEY!);}
 function isSuperAdmin(){return validSessionToken(cookies().get('sakan_super')?.value,'super');}
-function cleanDomain(value:unknown){return String(value||'').trim().toLowerCase().split(':')[0];}
 
 export async function POST(req:Request){
   if(!isSuperAdmin())return NextResponse.json({error:'Unauthorized'},{status:401});
@@ -14,8 +14,8 @@ export async function POST(req:Request){
 
   if(action==='license_save'){
     const id=body.id?String(body.id):'';
-    const domain=cleanDomain(body.data?.domain);
-    if(!domain)return NextResponse.json({error:'domain is required'},{status:400});
+    const domain=normalizeTenantDomain(body.data?.domain);
+    if(!domain)return NextResponse.json({error:'الدومين غير صالح. استخدم مثال: sakan-rasalbar.vercel.app'},{status:400});
     const status=['active','suspended','expired'].includes(body.data?.status)?body.data.status:'active';
     const payload={
       client_name:(String(body.data?.customer_name||body.data?.client_name||'').trim()||domain),
@@ -51,8 +51,8 @@ export async function POST(req:Request){
   }
 
   if(action==='settings_save'){
-    const domain=cleanDomain(body.data?.tenant_domain);
-    if(!domain)return NextResponse.json({error:'tenant_domain is required'},{status:400});
+    const domain=normalizeTenantDomain(body.data?.tenant_domain);
+    if(!domain)return NextResponse.json({error:'الدومين غير صالح. استخدم مثال: sakan-rasalbar.vercel.app'},{status:400});
     const payload={
       tenant_domain:domain,
       brand_name:String(body.data?.brand_name||''),
