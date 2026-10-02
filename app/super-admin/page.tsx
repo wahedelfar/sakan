@@ -10,9 +10,30 @@ type License = {
   expires_at?:string|null;
   created_at?:string;
   is_active?:boolean;
+  subscription_amount?:number|null;
+  payment_status?:'paid'|'unpaid'|'pending'|'overdue'|'waived'|string;
+  payment_date?:string|null;
+  payment_method?:string|null;
+  payment_reference?:string|null;
+  notes?:string|null;
 };
 
-const emptyLicense = { customer_name:'', customer_phone:'', domain:'', status:'active', expires_at:'' };
+const emptyLicense = {
+  customer_name:'', customer_phone:'', domain:'', status:'active', expires_at:'',
+  subscription_amount:'', payment_status:'unpaid', payment_date:'', payment_method:'', payment_reference:'', notes:''
+};
+
+const paymentMeta:any = {
+  paid:{label:'مدفوع',cls:'text-emerald-300'},
+  unpaid:{label:'غير مدفوع',cls:'text-red-300'},
+  pending:{label:'قيد التحصيل',cls:'text-yellow-200'},
+  overdue:{label:'متأخر',cls:'text-red-300'},
+  waived:{label:'معفى',cls:'text-white/60'}
+};
+function money(v?:number|null){
+  if(v===null || v===undefined || v==='') return 'غير محدد';
+  return new Intl.NumberFormat('ar-EG',{maximumFractionDigits:2}).format(Number(v))+' ج.م';
+}
 
 function daysLeft(date?:string|null){
   if(!date) return null;
@@ -57,14 +78,17 @@ export default function SuperAdmin() {
     const soon=licenses.filter(l=>statusMeta(l).label==='ينتهي قريباً').length;
     const expired=licenses.filter(l=>statusMeta(l).label==='منتهي').length;
     const suspended=licenses.filter(l=>statusMeta(l).label==='موقوف').length;
-    return {total:licenses.length,active,soon,expired,suspended};
+    const paid=licenses.filter(l=>l.payment_status==='paid');
+    const collected=paid.reduce((sum,l)=>sum+(Number(l.subscription_amount)||0),0);
+    const outstanding=licenses.filter(l=>['unpaid','pending','overdue'].includes(String(l.payment_status))).reduce((sum,l)=>sum+(Number(l.subscription_amount)||0),0);
+    return {total:licenses.length,active,soon,expired,suspended,collected,outstanding};
   },[licenses]);
 
   const saveLicense=async()=>{
     if(!license.customer_name && !license.domain)return alert('أدخل اسم العميل أو النطاق');
     const r=await fetch('/api/super-admin/action',{
       method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({action:'license_save',id:license.id||null,data:{...license,expires_at:license.expires_at||null}})
+      body:JSON.stringify({action:'license_save',id:license.id||null,data:{...license,expires_at:license.expires_at||null,payment_date:license.payment_date||null,subscription_amount:license.subscription_amount===''?null:Number(license.subscription_amount)||0,payment_reference:license.payment_reference||null,payment_method:license.payment_method||null,notes:license.notes||null}})
     });
     const j=await r.json().catch(()=>({}));
     if(!r.ok)return alert(j.error||'تعذر حفظ الترخيص');
@@ -123,7 +147,9 @@ export default function SuperAdmin() {
             ['نشط',stats.active,'text-emerald-300'],
             ['ينتهي قريباً',stats.soon,'text-yellow-200'],
             ['منتهي',stats.expired,'text-red-300'],
-            ['موقوف',stats.suspended,'text-red-300']
+            ['موقوف',stats.suspended,'text-red-300'],
+            ['المحصّل',money(stats.collected),'text-emerald-300'],
+            ['المستحق',money(stats.outstanding),'text-yellow-200']
           ].map(([label,value,cls])=><div key={String(label)} className="glass rounded-2xl p-4"><div className="text-white/50 text-sm">{label}</div><div className={`text-2xl font-extrabold mt-1 ${cls}`}>{value}</div></div>)}
         </div>
 
@@ -153,9 +179,15 @@ export default function SuperAdmin() {
                 <div className="rounded-xl bg-white/5 p-3"><div className="text-white/40 text-xs">حالة الموقع</div><div className="font-semibold mt-1">{site?'مهيأ وجاهز':'يحتاج إعداد'}</div></div>
               </div>
 
-              <div className="mt-4 rounded-xl bg-white/5 p-3 flex justify-between gap-3">
-                <div><div className="text-white/40 text-xs">الدفع</div><div className="font-semibold mt-1">غير مسجل مالياً حالياً</div></div>
-                {l.customer_phone&&<a href={`tel:${l.customer_phone}`} className="text-[#D4AF37] self-end">{l.customer_phone}</a>}
+              <div className="mt-4 rounded-xl bg-white/5 p-3 grid grid-cols-2 gap-3">
+                <div><div className="text-white/40 text-xs">الاشتراك</div><div className="font-semibold mt-1">{money(l.subscription_amount)}</div></div>
+                <div><div className="text-white/40 text-xs">حالة الدفع</div><div className={`font-semibold mt-1 ${paymentMeta[l.payment_status||'unpaid']?.cls||'text-white'}`}>{paymentMeta[l.payment_status||'unpaid']?.label||l.payment_status||'غير مسجل'}</div></div>
+                <div><div className="text-white/40 text-xs">تاريخ الدفع</div><div className="font-semibold mt-1">{fmtDate(l.payment_date)}</div></div>
+                <div><div className="text-white/40 text-xs">طريقة الدفع</div><div className="font-semibold mt-1">{l.payment_method||'غير محددة'}</div></div>
+              </div>
+              <div className="mt-3 flex justify-between gap-3 text-sm">
+                <span className="text-white/40">مرجع الدفع: {l.payment_reference||'—'}</span>
+                {l.customer_phone&&<a href={`tel:${l.customer_phone}`} className="text-[#D4AF37]">{l.customer_phone}</a>}
               </div>
 
               <div className="flex flex-wrap gap-2 mt-4">
@@ -187,12 +219,18 @@ export default function SuperAdmin() {
             <input value={license.domain||''} onChange={e=>setLicense({...license,domain:e.target.value})} placeholder="النطاق" className="rounded-xl bg-white/10 p-3"/>
             <select value={license.status||'active'} onChange={e=>setLicense({...license,status:e.target.value})} className="rounded-xl bg-white/10 p-3"><option value="active">نشط</option><option value="suspended">موقوف</option><option value="expired">منتهي</option></select>
             <label className="text-sm">تاريخ الانتهاء<input type="date" value={license.expires_at||''} onChange={e=>setLicense({...license,expires_at:e.target.value})} className="mt-1 w-full rounded-xl bg-white/10 p-3"/></label>
+            <label className="text-sm">قيمة الاشتراك (ج.م)<input type="number" min="0" step="0.01" value={license.subscription_amount??''} onChange={e=>setLicense({...license,subscription_amount:e.target.value})} placeholder="مثال: 500" className="mt-1 w-full rounded-xl bg-white/10 p-3"/></label>
+            <label className="text-sm">حالة الدفع<select value={license.payment_status||'unpaid'} onChange={e=>setLicense({...license,payment_status:e.target.value})} className="mt-1 w-full rounded-xl bg-white/10 p-3"><option value="paid">مدفوع</option><option value="unpaid">غير مدفوع</option><option value="pending">قيد التحصيل</option><option value="overdue">متأخر</option><option value="waived">معفى</option></select></label>
+            <label className="text-sm">تاريخ الدفع<input type="date" value={license.payment_date?license.payment_date.slice(0,10):''} onChange={e=>setLicense({...license,payment_date:e.target.value})} className="mt-1 w-full rounded-xl bg-white/10 p-3"/></label>
+            <label className="text-sm">طريقة الدفع<select value={license.payment_method||''} onChange={e=>setLicense({...license,payment_method:e.target.value})} className="mt-1 w-full rounded-xl bg-white/10 p-3"><option value="">غير محددة</option><option value="cash">نقدي</option><option value="vodafone_cash">Vodafone Cash</option><option value="instapay">InstaPay</option><option value="bank_transfer">تحويل بنكي</option><option value="card">بطاقة</option><option value="other">أخرى</option></select></label>
+            <input value={license.payment_reference||''} onChange={e=>setLicense({...license,payment_reference:e.target.value})} placeholder="مرجع / رقم العملية" className="rounded-xl bg-white/10 p-3"/>
+            <textarea value={license.notes||''} onChange={e=>setLicense({...license,notes:e.target.value})} placeholder="ملاحظات الاشتراك أو الدفع" className="md:col-span-2 rounded-xl bg-white/10 p-3 min-h-24"/>
           </div>
-          <div className="mt-3 text-xs text-white/40">ملاحظة: بيانات المبلغ وحالة الدفع وتاريخ التحصيل غير موجودة في مخطط licenses الحالي، لذلك لن يتم اختلاقها أو تخزينها في حقول غير مؤكدة.</div>
+          <div className="mt-3 text-xs text-white/40">البيانات المالية مرتبطة مباشرة بسجل الترخيص الحالي، ولا يوجد جدول إضافي مطلوب لهذه المرحلة.</div>
           <div className="flex gap-2 mt-4"><button onClick={saveLicense} className="btn-gold rounded-xl px-6 py-3">حفظ</button>{license.id&&<button onClick={()=>setLicense(emptyLicense)} className="bg-white/10 rounded-xl px-6 py-3">إلغاء</button>}</div>
           {licenseError&&<p className="text-yellow-300 mt-4">{licenseError}</p>}
         </div>
-        <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name||'بدون اسم'}</b><div className="text-white/50">{l.domain}</div><div className="text-xs text-white/40 mt-1">{statusMeta(l).label} — حتى {fmtDate(l.expires_at)}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={()=>deleteLicense(l.id)} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف الترخيص</button></div></div>)}</div>
+        <div className="space-y-3">{licenses.map(l=><div key={l.id} className="glass rounded-2xl p-4 flex justify-between gap-3"><div><b>{l.customer_name||'بدون اسم'}</b><div className="text-white/50">{l.domain}</div><div className="text-xs text-white/40 mt-1">{statusMeta(l).label} — حتى {fmtDate(l.expires_at)}</div><div className="text-xs mt-2"><span className="text-white/40">الدفع:</span> <span className={paymentMeta[l.payment_status||'unpaid']?.cls||''}>{paymentMeta[l.payment_status||'unpaid']?.label||'غير مسجل'}</span> · {money(l.subscription_amount)}</div></div><div className="flex gap-2"><button onClick={()=>setLicense({...l,expires_at:l.expires_at?.slice(0,10)||''})} className="bg-white/10 rounded-lg px-3 py-2">تعديل</button><button onClick={()=>deleteLicense(l.id)} className="bg-red-500/15 text-red-300 rounded-lg px-3 py-2">حذف الترخيص</button></div></div>)}</div>
       </section>}
     </div>
   </main>;
