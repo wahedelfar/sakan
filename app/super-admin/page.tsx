@@ -31,8 +31,8 @@ const paymentMeta:any = {
   waived:{label:'معفى',cls:'text-white/60'}
 };
 function money(v?:number|null){
-  if(v===null || v===undefined || v==='') return 'غير محدد';
-  return new Intl.NumberFormat('ar-EG',{maximumFractionDigits:2}).format(Number(v))+' ج.م';
+  if(v===null || v===undefined) return 'غير محدد';
+  return new Intl.NumberFormat('ar-EG',{maximumFractionDigits:2}).format(v)+' ج.م';
 }
 
 function daysLeft(date?:string|null){
