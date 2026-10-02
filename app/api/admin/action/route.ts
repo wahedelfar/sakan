@@ -21,6 +21,25 @@ export async function POST(req:Request){
     return NextResponse.json({ok:true});
   }
 
+  if(action==='booking_delete'){
+    const id=String(body.id||'');if(!id)return NextResponse.json({error:'id required'},{status:400});
+    const {data:b,error}=await s.from('bookings').select('property_id,status').eq('id',id).eq('tenant_domain',domain).single();
+    if(error)return NextResponse.json({error:error.message},{status:500});
+    const {error:delError}=await s.from('bookings').delete().eq('id',id).eq('tenant_domain',domain);
+    if(delError)return NextResponse.json({error:delError.message},{status:500});
+    if(b?.property_id&&b.status==='مؤكد'){
+      const {data:remaining}=await s.from('bookings').select('id').eq('property_id',b.property_id).eq('tenant_domain',domain).eq('status','مؤكد').limit(1);
+      if(!remaining?.length)await s.from('properties').update({status:'متاح'}).eq('id',b.property_id).eq('tenant_domain',domain);
+    }
+    return NextResponse.json({ok:true});
+  }
+
+  if(action==='customer_delete'){
+    const id=String(body.id||'');if(!id)return NextResponse.json({error:'id required'},{status:400});
+    const {error}=await s.from('customers').delete().eq('id',id).eq('tenant_domain',domain);
+    if(error)return NextResponse.json({error:error.message},{status:500});return NextResponse.json({ok:true});
+  }
+
   if(action==='property_save'){
     const data={...(body.data||{}),tenant_domain:domain};
     const q=data.id?s.from('properties').update(data).eq('id',data.id).eq('tenant_domain',domain):s.from('properties').insert(data);
