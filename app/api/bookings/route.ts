@@ -15,15 +15,8 @@ export async function POST(req:Request){
  if(pe||!property)return NextResponse.json({error:'العقار غير متاح لهذا النطاق'},{status:404});
  const {data:conflicts}=await s.from('bookings').select('id,check_in,check_out').eq('tenant_domain',domain).eq('property_id',body.property_id).eq('status','مؤكد').lt('check_in',body.check_out).gt('check_out',body.check_in);
  if(conflicts?.length)return NextResponse.json({error:'الفترة المختارة تتداخل مع حجز مؤكد'},{status:409});
- let receipt_url=null;
- if(body.receipt_name&&body.receipt_base64){
-  const raw=String(body.receipt_base64).split(',').pop()||'',buf=Buffer.from(raw,'base64');
-  const safe=String(body.receipt_name).replace(/[^a-zA-Z0-9._-]/g,'_');
-  const path=`${domain}/receipts/${Date.now()}-${safe}`;
-  const up=await s.storage.from('property-images').upload(path,buf,{contentType:body.receipt_type||'image/jpeg',upsert:false});
-  if(up.error)return NextResponse.json({error:'تعذر رفع الإيصال'},{status:400});
-  receipt_url=s.storage.from('property-images').getPublicUrl(path).data.publicUrl;
- }
+ let receipt_url=null,receipt_warning=null;
+ if(body.receipt_name&&body.receipt_base64){try{const raw=String(body.receipt_base64).split(',').pop()||'',buf=Buffer.from(raw,'base64');const safe=String(body.receipt_name).replace(/[^a-zA-Z0-9._-]/g,'_');const path=domain+'/receipts/'+Date.now()+'-'+safe;const up=await s.storage.from('property-images').upload(path,buf,{contentType:body.receipt_type||'image/jpeg',upsert:false});if(up.error)receipt_warning=up.error.message;else receipt_url=s.storage.from('property-images').getPublicUrl(path).data.publicUrl}catch(e){receipt_warning='تعذر حفظ الإيصال، لكن تم حفظ الحجز'}}
  const nights=Math.max(1,Math.ceil((new Date(body.check_out).getTime()-new Date(body.check_in).getTime())/86400000));
  const total=nights*Number(property.price_per_night||0),deposit=Number(property.deposit_amount||property.price_per_night||0);
  const paymentTotal=body.payment_type==='عربون فقط'?deposit:total;
@@ -31,8 +24,7 @@ export async function POST(req:Request){
  const booking={id:bookingId,property_id:property.id,tenant_domain:domain,customer_name:String(body.customer_name),customer_phone:String(body.customer_phone),check_in:body.check_in,check_out:body.check_out,total_price:paymentTotal,payment_method:body.payment_method,receipt_url,status:'معلق',payment_type:body.payment_type||'كامل',deposit_paid:body.payment_type==='عربون فقط',arrival_time:body.arrival_time||'09:00'};
  const {error}=await s.from('bookings').insert(booking);
  if(error)return NextResponse.json({error:error.message},{status:500});
- const customerResult=await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});
- const propertyResult=await s.from('properties').update({status:'محجوز جزئيا'}).eq('id',property.id).eq('tenant_domain',domain);
- // فشل تحديث بيانات العميل أو حالة العقار لا يلغي الحجز الذي تم إنشاؤه بالفعل.
- return NextResponse.json({booking,customer_warning:customerResult.error?.message||null,property_warning:propertyResult.error?.message||null},{status:201});
+ let customerWarning=null;
+ try{const customerResult=await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});customerWarning=customerResult.error?.message||null}catch(e){customerWarning='تعذر تحديث بيانات العميل'}
+ return NextResponse.json({booking:{id:booking.id},customer_warning:customerWarning,receipt_warning},{status:201});
 }
