@@ -6,7 +6,12 @@ export async function POST(req:Request){
  const domain=host(req),body=await req.json().catch(()=>({})),s=db();
  const required=['property_id','customer_name','customer_phone','check_in','check_out','payment_method'];
  if(required.some(k=>!body[k]))return NextResponse.json({error:'أكمل بيانات الحجز'},{status:400});
- const {data:property,error:pe}=await s.from('properties').select('*').eq('id',body.property_id).eq('tenant_domain',domain).maybeSingle();
+ let {data:property,error:pe}=await s.from('properties').select('*').eq('id',body.property_id).eq('tenant_domain',domain).maybeSingle();
+ // توافق مع العقارات القديمة التي أُنشئت قبل إضافة tenant_domain، للمتجر الرئيسي فقط.
+ if(!property && domain==='sakan-egy.vercel.app'){
+  const legacy=await s.from('properties').select('*').eq('id',body.property_id).is('tenant_domain',null).maybeSingle();
+  property=legacy.data; pe=legacy.error;
+ }
  if(pe||!property)return NextResponse.json({error:'العقار غير متاح لهذا النطاق'},{status:404});
  const {data:conflicts}=await s.from('bookings').select('id,check_in,check_out').eq('tenant_domain',domain).eq('property_id',body.property_id).eq('status','مؤكد').lt('check_in',body.check_out).gt('check_out',body.check_in);
  if(conflicts?.length)return NextResponse.json({error:'الفترة المختارة تتداخل مع حجز مؤكد'},{status:409});
