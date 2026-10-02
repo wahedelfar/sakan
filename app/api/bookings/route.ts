@@ -26,5 +26,5 @@ export async function POST(req:Request){
  if(error)return NextResponse.json({error:error.message},{status:500});
  let customerWarning=null;
  try{const customerResult=await s.from('customers').upsert({name:String(body.customer_name),phone:String(body.customer_phone),tenant_domain:domain},{onConflict:'tenant_domain,phone'});customerWarning=customerResult.error?.message||null}catch(e){customerWarning='تعذر تحديث بيانات العميل'}
- return NextResponse.json({booking:createdBooking||{id:booking.id},customer_warning:customerWarning,receipt_warning},{status:201});
+ return NextResponse.json({booking:createdBooking||{id:booking.id},customer_warning:customerWarning,receipt_warning},{status:201,headers:{'X-Booking-Id':createdBooking?.id||booking.id}});
 }
