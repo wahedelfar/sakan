@@ -65,6 +65,14 @@ export async function POST(req:Request){
     if(error)return NextResponse.json({error:error.message},{status:500});return NextResponse.json({ok:true});
   }
 
+  if(action==='logo'){
+    const logo_url=String(body.logo_url||'').trim();
+    if(!logo_url)return NextResponse.json({error:'رابط اللوجو مطلوب'},{status:400});
+    const {error}=await s.from('settings').update({logo_url}).eq('tenant_domain',domain);
+    if(error)return NextResponse.json({error:error.message},{status:500});
+    return NextResponse.json({ok:true});
+  }
+
   if(action==='theme'){
     const color=String(body.primary_color||'').trim();
     if(!/^#[0-9A-Fa-f]{6}$/.test(color))return NextResponse.json({error:'لون غير صالح'},{status:400});
