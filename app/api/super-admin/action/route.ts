@@ -22,7 +22,13 @@ export async function POST(req:Request){
       phone:String(body.data?.customer_phone||body.data?.phone||'').trim()||null,
       domain,
       is_active:status==='active',
-      expires_at:body.data?.expires_at||null
+      expires_at:body.data?.expires_at||null,
+      subscription_amount:body.data?.subscription_amount===''||body.data?.subscription_amount==null?null:Number(body.data.subscription_amount),
+      payment_status:['paid','unpaid','pending','overdue','waived'].includes(body.data?.payment_status)?body.data.payment_status:'unpaid',
+      payment_date:body.data?.payment_date||null,
+      payment_method:body.data?.payment_method||null,
+      payment_reference:body.data?.payment_reference||null,
+      notes:body.data?.notes||null
     };
     let data:any,error:any;
     if(id){
