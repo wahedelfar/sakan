@@ -11,7 +11,7 @@ export async function GET(req:Request){
   // It must remain accessible even when no customer license exists yet.
   if(domain !== PRIMARY_DOMAIN){
     const {data:lic,error:licenseError}=await s.from('licenses')
-      .select('status,expires_at,is_active')
+      .select('expires_at,is_active')
       .eq('domain',domain)
       .order('created_at',{ascending:false})
       .limit(1)
@@ -21,8 +21,6 @@ export async function GET(req:Request){
 
     const activeLicense =
       !!lic &&
-      lic.status !== 'suspended' &&
-      lic.status !== 'expired' &&
       lic.is_active !== false &&
       (!lic.expires_at || new Date(lic.expires_at).getTime() >= Date.now());
 
