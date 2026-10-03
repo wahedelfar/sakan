@@ -4,7 +4,14 @@ import { headers } from 'next/headers';
 import { createClient } from '@supabase/supabase-js';
 import { normalizeTenantDomain } from '@/lib/tenant';
 
-const commonIcons = { icon:'/sakan-icon.svg', apple:'/sakan-icon.svg' };
+const commonIcons = {
+  icon: [
+    { url: '/sakan-icon.svg', type: 'image/svg+xml' }
+  ],
+  apple: [
+    { url: '/sakan-icon.svg', type: 'image/svg+xml' }
+  ]
+};
 
 async function tenantSettings(host: string) {
   const supabase = createClient(
@@ -36,7 +43,7 @@ export async function generateMetadata(): Promise<Metadata>{
       locale:'ar_EG',
       title:'سكن | نظام تأجير عقاري جاهز باسمك',
       description:'منصة تأجير عقاري جاهزة باسمك — موقع حجز ولوحة تحكم وإدارة للحجوزات والدفع والتوافر.',
-      images:[{url:'/share-preview',width:1200,height:630,alt:'سكن — منصة تأجير عقاري'}]
+      images:[{url:'/opengraph-image?v=2',width:1200,height:630,alt:'سكن — منصة تأجير عقاري'}]
     },
     twitter:{
       card:'summary_large_image',
@@ -64,13 +71,13 @@ export async function generateMetadata(): Promise<Metadata>{
       locale:'ar_EG',
       title:`${brand} | شقق وعقارات للإيجار`,
       description:`تصفح العقارات المتاحة لدى ${brand} واحجز إقامتك بسهولة.`,
-      images:[{url:'/share-preview',width:1200,height:630,alt:brand}]
+      images:[{url:'/opengraph-image?v=2',width:1200,height:630,alt:brand}]
     },
     twitter:{
       card:'summary_large_image',
       title:`${brand} | شقق وعقارات للإيجار`,
       description:`تصفح العقارات المتاحة لدى ${brand} واحجز إقامتك بسهولة.`,
-      images:['/share-preview']
+      images:['/opengraph-image?v=2']
     },
     robots:{index:true,follow:true,googleBot:{index:true,follow:true}},
     icons:commonIcons
