@@ -38,6 +38,7 @@ export async function POST(r: Request) {
       !!license &&
       license.is_active !== false &&
       license.status !== 'suspended' &&
+      license.status !== 'expired' &&
       (!license.expires_at || new Date(license.expires_at).getTime() >= Date.now());
 
     if (!activeLicense) {
