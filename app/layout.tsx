@@ -16,7 +16,6 @@ export async function generateMetadata(): Promise<Metadata>{
     alternates:{canonical:'https://egarat.online'},
     openGraph:{
       type:'website',
-      url:'https://egarat.online',
       url:`https://${host || 'egarat.online'}`,
       siteName:'سكن',
       locale:'ar_EG',
