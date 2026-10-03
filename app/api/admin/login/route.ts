@@ -73,10 +73,10 @@ export async function POST(r: Request) {
       valid = false;
     }
   } else {
-    // First-login default for the built-in tenant.
-    // Customer tenants still require their own client_auth record.
+    // First-login default for a tenant that has an active license.
+    // The credentials are only a bootstrap; once the tenant saves custom
+    // credentials, client_auth is used and the default no longer applies.
     valid =
-      domain === PRIMARY_DOMAIN &&
       username === 'waheed' &&
       password === 'ahmedwaheed';
   }
