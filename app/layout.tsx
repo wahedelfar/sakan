@@ -21,7 +21,7 @@ export async function generateMetadata(): Promise<Metadata>{
       locale:'ar_EG',
       title:'سكن | نظام تأجير عقاري جاهز باسمك',
       description:'منصة تأجير عقاري جاهزة باسمك — موقع حجز ولوحة تحكم وإدارة للحجوزات والدفع والتوافر.',
-      images:[{url:'/opengraph-image',width:1200,height:630,alt:'سكن — منصة تأجير عقاري'}]
+      images:[{url:'/share-preview',width:1200,height:630,alt:'سكن — منصة تأجير عقاري'}]
     },
     twitter:{
       card:'summary_large_image',
@@ -42,9 +42,9 @@ export async function generateMetadata(): Promise<Metadata>{
       locale:'ar_EG',
       title:'سكن',
       description:'منصة سكن للتأجير العقاري.',
-      images:[{url:'/opengraph-image',width:1200,height:630,alt:'سكن'}]
+      images:[{url:'/share-preview',width:1200,height:630,alt:'سكن'}]
     },
-    twitter:{card:'summary_large_image',title:'سكن',images:['/opengraph-image']},
+    twitter:{card:'summary_large_image',title:'سكن',images:['/share-preview']},
     icons:commonIcons
   };
 }
