@@ -8,18 +8,18 @@ export const contentType = 'image/png';
 export default function Image() {
   return new ImageResponse(
     <div style={{
-      width:'100%',
-      height:'100%',
-      display:'flex',
-      alignItems:'center',
-      justifyContent:'center',
-      background:'#000'
+      width: '100%',
+      height: '100%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#f7f3ea'
     }}>
       <img
-        src="https://egarat.online/sakan-icon.svg"
-        width="540"
-        height="540"
-        style={{objectFit:'contain'}}
+        src="https://egarat.online/sakan-share.svg"
+        width="500"
+        height="500"
+        style={{ objectFit: 'contain' }}
       />
     </div>,
     size
