@@ -1,11 +1,26 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { headers } from 'next/headers';
+import { createClient } from '@supabase/supabase-js';
+import { normalizeTenantDomain } from '@/lib/tenant';
 
 const commonIcons = { icon:'/sakan-icon.svg', apple:'/sakan-icon.svg' };
 
+async function tenantSettings(host: string) {
+  const supabase = createClient(
+    'https://apmopxvwxmwxwgxscbqt.supabase.co',
+    process.env.SUPABASE_SERVICE_ROLE_KEY!
+  );
+  const { data } = await supabase
+    .from('settings')
+    .select('brand_name,logo_url')
+    .eq('tenant_domain', host)
+    .maybeSingle();
+  return data;
+}
+
 export async function generateMetadata(): Promise<Metadata>{
-  const host=headers().get('host')?.split(':')[0].toLowerCase()||'';
+  const host=normalizeTenantDomain(headers().get('host')?.split(':')[0] || '') || 'egarat.online';
   const saas=host==='egarat.online'||host==='www.egarat.online';
 
   if(saas)return{
@@ -16,7 +31,7 @@ export async function generateMetadata(): Promise<Metadata>{
     alternates:{canonical:'https://egarat.online'},
     openGraph:{
       type:'website',
-      url:`https://${host || 'egarat.online'}`,
+      url:'https://egarat.online',
       siteName:'سكن',
       locale:'ar_EG',
       title:'سكن | نظام تأجير عقاري جاهز باسمك',
@@ -32,20 +47,32 @@ export async function generateMetadata(): Promise<Metadata>{
     icons:commonIcons
   };
 
+  const settings = await tenantSettings(host);
+  const brand = settings?.brand_name || 'سكن';
+  const canonical = `https://${host}`;
+
   return{
-    metadataBase:new URL(`https://${host || 'egarat.online'}`),
-    title:'سكن',
-    description:'منصة سكن للتأجير العقاري.',
+    metadataBase:new URL(canonical),
+    title:`${brand} | شقق وعقارات للإيجار`,
+    description:`تصفح العقارات المتاحة لدى ${brand} واحجز إقامتك بسهولة.`,
+    alternates:{canonical},
     manifest:'/manifest.webmanifest',
     openGraph:{
       type:'website',
-      siteName:'سكن',
+      url:canonical,
+      siteName:brand,
       locale:'ar_EG',
-      title:'سكن',
-      description:'منصة سكن للتأجير العقاري.',
-      images:[{url:'/share-preview',width:1200,height:630,alt:'سكن'}]
+      title:`${brand} | شقق وعقارات للإيجار`,
+      description:`تصفح العقارات المتاحة لدى ${brand} واحجز إقامتك بسهولة.`,
+      images:[{url:'/share-preview',width:1200,height:630,alt:brand}]
     },
-    twitter:{card:'summary_large_image',title:'سكن',images:['/share-preview']},
+    twitter:{
+      card:'summary_large_image',
+      title:`${brand} | شقق وعقارات للإيجار`,
+      description:`تصفح العقارات المتاحة لدى ${brand} واحجز إقامتك بسهولة.`,
+      images:['/share-preview']
+    },
+    robots:{index:true,follow:true,googleBot:{index:true,follow:true}},
     icons:commonIcons
   };
 }
