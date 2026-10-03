@@ -17,6 +17,7 @@ export async function generateMetadata(): Promise<Metadata>{
     openGraph:{
       type:'website',
       url:'https://egarat.online',
+      url:`https://${host || 'egarat.online'}`,
       siteName:'سكن',
       locale:'ar_EG',
       title:'سكن | نظام تأجير عقاري جاهز باسمك',
@@ -33,6 +34,7 @@ export async function generateMetadata(): Promise<Metadata>{
   };
 
   return{
+    metadataBase:new URL(`https://${host || 'egarat.online'}`),
     title:'سكن',
     description:'منصة سكن للتأجير العقاري.',
     manifest:'/manifest.webmanifest',
