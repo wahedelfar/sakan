@@ -22,8 +22,6 @@ export async function GET(req: Request) {
     .maybeSingle();
 
   const name = String(data?.brand_name || 'سكن').trim() || 'سكن';
-  const icon192 = new URL('/api/public/app-icon?size=192', req.url).toString();
-  const icon512 = new URL('/api/public/app-icon?size=512', req.url).toString();
 
   return NextResponse.json(
     {
@@ -39,8 +37,7 @@ export async function GET(req: Request) {
       theme_color: '#D4AF37',
       background_color: '#090a0c',
       icons: [
-        { src: icon192, sizes: '192x192', purpose: 'any maskable' },
-        { src: icon512, sizes: '512x512', purpose: 'any maskable' }
+        { src: '/sakan-icon.svg', sizes: '1536x1536', type: 'image/svg+xml', purpose: 'any maskable' }
       ]
     },
     {
